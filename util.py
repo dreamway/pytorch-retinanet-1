@@ -10,19 +10,17 @@ import pdb
 
 def get_mean_and_std(dataset, max_load=10000):
     '''Compute the mean and std value of dataset.'''
-    # dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=2)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=2)
     mean = torch.zeros(3)
     std = torch.zeros(3)
     print('==> Computing mean and std..')
-    N = min(max_load, len(dataset))
-    for i in range(N):
-        print(i)
-        im,_,_ = dataset.load(1)
+    for sample in dataloader:
+        im = sample['img']
         for j in range(3):
             mean[j] += im[:,j,:,:].mean()
             std[j] += im[:,j,:,:].std()
-    mean.div_(N)
-    std.div_(N)
+    mean.div_(len(dataset))
+    std.div_(len(dataset))
     return mean, std
 
 def mask_select(input, mask, dim=0):
@@ -174,11 +172,11 @@ def box_nms(bboxes, threshold=0.5, mode='union'):
 
     keep = []
     while order.numel() > 0:
-        i = order[0]
-        keep.append(i)
-
         if order.numel() == 1:
             break
+
+        i = order[0]
+        keep.append(i)
 
         xx1 = x1[order[1:]].clamp(min=x1[i])
         yy1 = y1[order[1:]].clamp(min=y1[i])

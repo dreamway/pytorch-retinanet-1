@@ -202,7 +202,6 @@ class CSVDataset(Dataset):
         return len(self.image_names)
 
     def __getitem__(self, idx):
-
         img = self.load_image(idx)
         annot = self.load_annotations(idx)
         sample = {'img': img, 'annot': annot}
@@ -210,6 +209,9 @@ class CSVDataset(Dataset):
             sample = self.transform(sample)
 
         return sample
+    
+    def get_image_name(self, idx):
+        return self.image_names[idx]
 
     def load_image(self, image_index):
         img = skimage.io.imread(self.image_names[image_index])
@@ -341,7 +343,7 @@ def collater(data):
 class Resizer(object):
     """Convert ndarrays in sample to Tensors."""
 
-    def __call__(self, sample, min_side=608, max_side=1024):
+    def __call__(self, sample, min_side=600, max_side=900):
         image, annots = sample['img'], sample['annot']
 
         rows, cols, cns = image.shape
@@ -399,9 +401,15 @@ class Augmenter(object):
 
 class Normalizer(object):
 
-    def __init__(self):
-        self.mean = np.array([[[0.485, 0.456, 0.406]]])
-        self.std = np.array([[[0.229, 0.224, 0.225]]])
+    def __init__(self, mean=None, std=None):
+        if mean is None:
+            self.mean = np.array([[[0.485, 0.456, 0.406]]])   
+        else:
+            self.mean = mean
+        if std is None:
+            self.std = np.array([[[0.229, 0.224, 0.225]]])
+        else:
+            self.std = std
 
     def __call__(self, sample):
 
@@ -458,3 +466,93 @@ class AspectRatioBasedSampler(Sampler):
 
         # divide into groups, one group = one batch
         return [[order[x % len(order)] for x in range(i, i + self.batch_size)] for i in range(0, len(order), self.batch_size)]
+
+
+class YFlipAugmenter(object):
+    """ Convert ndarrays in sample to Tensors """
+
+    def __call__(self, sample, flip_y=0.5):
+        if np.random.rand() < flip_y:
+            image, annots = sample['img'], sample['annot']
+            image = image[::-1, :, :] #flip Y image
+
+            rows, cols, channels = image.shape
+            y1 = annots[:, 1].copy()
+            y2 = annots[:, 3].copy()
+            y_tmp = y1.copy()
+            annots[:, 1] = rows - y2
+            annots[:, 3] = rows - y_tmp
+            sample = {'img': image, 'annot': annots}
+        return sample
+
+class CropAugmenter(object):
+    """ Crop data augmenter """
+    def __call__(self, sample, ratio=0.5):
+        if np.random.rand() < ratio:
+            image, annots = sample['img'], sample['annot']
+
+            rows, cols, chns = image.shape
+            cropx = random.randint(20,40)
+            cropy = random.randint(20,40)
+
+            crop_img = image[cropx:, cropy:, :]
+
+            annots[:,0] = annots[:, 0]-cropx
+            annots[:,1] = annots[:, 1]-cropy
+            annots[:,2] = annots[:, 2]-cropx
+            annots[:,3] = annots[:, 3]-cropy
+
+            sample = {'img': crop_img, 'annot': annots}
+
+        return sample
+
+
+class Rot90Augmenter(object):
+    """ rot90 data augmenter """
+    def __call__(self, sample, ratio=0.5):
+        if np.random.rand() < ratio:
+            image, annots = sample['img'], sample['annot']
+
+            rows, cols, chns = image.shape
+
+            rotated = np.rot90(image, 1)
+
+            # rotate the annots            
+            x1p = annots[:,1]  #x1p = y1
+            y1p = cols - annots[:,2] #y1p = width-x2
+            x2p = annots[:,3] #x2p = y2
+            y2p = cols-annots[:,0] #y2p = width-x1
+
+            annots[:,0] = x1p
+            annots[:,1] = y1p   
+            annots[:,2] = x2p
+            annots[:,3] = y2p
+
+            sample = {'img': rotated, 'annot': annots}
+
+        return sample
+
+class Rot180Augmenter(object):
+    """ rot180 data augmenter """
+    def __call__(self, sample, ratio=0.5):
+        if np.random.rand() < ratio:
+            image, annots = sample['img'], sample['annot']
+
+            rows, cols, chns = image.shape
+
+            rotated = np.rot90(image, 2)
+
+            #rotate annots
+            x1p = cols - annots[:,2]
+            y1p = rows - annots[:,3]
+            x2p = cols - annots[:,0]
+            y2p = rows - annots[:,1]
+
+            annots[:,0] = x1p 
+            annots[:,1] = y1p
+            annots[:,2] = x2p
+            annots[:,3] = y2p
+
+            sample = {'img': rotated, 'annot': annots}
+
+        return sample

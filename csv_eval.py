@@ -5,7 +5,7 @@ import json
 import os
 
 import torch
-
+from PRCurvePlot import *
 
 
 def compute_overlap(a, b):
@@ -152,8 +152,8 @@ def evaluate(
     iou_threshold=0.5,
     score_threshold=0.05,
     max_detections=100,
-    save_path=None
-):
+    save_path=None,
+    epoch = None):
     """ Evaluate a given dataset using a given retinanet.
     # Arguments
         generator       : The generator that represents the dataset to evaluate.
@@ -165,9 +165,6 @@ def evaluate(
     # Returns
         A dict mapping class names to mAP scores.
     """
-
-
-
     # gather all detections and annotations
 
     all_detections     = _get_detections(generator, retinanet, score_threshold=score_threshold, max_detections=max_detections, save_path=save_path)
@@ -224,10 +221,17 @@ def evaluate(
         # compute recall and precision
         recall    = true_positives / num_annotations
         precision = true_positives / np.maximum(true_positives + false_positives, np.finfo(np.float64).eps)
-
+        
+        print('recall:', recall)
+        print('recall.type:', type(recall))
+        print('precision:', precision)
+        print('precision.type:', type(precision))
+        
         # compute average precision
         average_precision  = _compute_ap(recall, precision)
         average_precisions[label] = average_precision, num_annotations
+        title = "epoch {}_avg{}".format(epoch, average_precision)
+        plot_recall_precision_curve(np.array(recall), np.array(precision), title)
     
     print('\nmAP:')
     for label in range(generator.num_classes()):
