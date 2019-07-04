@@ -26,6 +26,10 @@ std = (0.1089, 0.1090, 0.1090)
 output_csv_fn = 'output.csv'
 output_file = open(output_csv_fn, 'w')
 
+not_processed_fn = 'not_processed.csv'
+not_processed_file = open(not_processed_fn, 'w')
+
+debug = True
 
 def main(args=None):
     parser = argparse.ArgumentParser(description='Simple visualizing script for visualize a RetinaNet network.')
@@ -95,24 +99,25 @@ def main(args=None):
                 y2 = int(bbox[3])
                 label_name = dataset_val.labels[int(classification[idxs[0][j]])]
                 draw_caption(img, (x1, y1, x2, y2), label_name)
-
                 cv2.rectangle(img, (x1, y1), (x2, y2), color=(0, 0, 255), thickness=2)
-            cv2.imshow('img', img)
-            key = cv2.waitKey(0)
-            if 'q'==chr(key & 255):
-                exit(0)
-            elif 's'==chr(key & 255):
-                origin_img = cv2.imread(fn)
-                origin_height, origin_width, _ = origin_img.shape
-                predict_height, predict_width, _ = img.shape
 
+            if idxs[0].shape[0] == 1:
+                origin_img = cv2.imread(fn)
                 x1p, y1p, x2p, y2p = convert_predict_to_origin_bbox(origin_img, img, x1, y1, x2, y2)
-                print('x1p,y1p,x2p,y2p:', x1p,y1p, x2p, y2p)
-                output_file.write(fn+','+str(x1p)+','+str(y1p)+','+str(x2p)+','+str(y2p)+','+'ROI\n')
-                print("!!!!!!!!!!! FN: {} SAVED!!!!!".format(fn))
+                output_file.write(fn+','+str(x1p)+','+str(y1p)+','+str(x2p)+','+str(y2p)+',ROI\n')
+                print("!!!! FN {} saved!!!".format(fn))
             else:
-                pass
+                not_processed_file.write(fn+",,,,,\n")
+
+            if debug:
+                cv2.imshow('img', img)
+                cv2.setWindowTitle('img', fn)
+                key = cv2.waitKey(0)
+                if 'q'==chr(key & 255):
+                    exit(0)
+
     output_file.close()
+    not_processed_file.close()
 
 
 
