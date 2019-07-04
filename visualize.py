@@ -103,7 +103,11 @@ def main(args=None):
 
             if idxs[0].shape[0] == 1:
                 origin_img = cv2.imread(fn)
-                x1p, y1p, x2p, y2p = convert_predict_to_origin_bbox(origin_img, img, x1, y1, x2, y2)
+                ret = convert_predict_to_origin_bbox(origin_img, img, x1, y1, x2, y2)
+                if ret is None:
+                    continue
+
+                x1p, y1p, x2p, y2p = ret
                 output_file.write(fn+','+str(x1p)+','+str(y1p)+','+str(x2p)+','+str(y2p)+',ROI\n')
                 print("!!!! FN {} saved!!!".format(fn))
             else:
@@ -130,16 +134,20 @@ def convert_predict_to_origin_bbox(origin_img, img, x1, y1, x2, y2):
 
     predict_aspect_ratio=predict_width*1.0/predict_height
     target_width = int(pad_height*predict_aspect_ratio)
-    new_image = np.zeros((pad_height, target_width, cns))
-    new_image[:rows, :cols,:] = origin_img
 
-    img_scale = float(target_width)/predict_width
-    x1 = int(x1*img_scale)
-    y1 = int(y1*img_scale)
-    x2 = int(x2*img_scale)
-    y2 = int(y2*img_scale)
+    try:
+        new_image = np.zeros((pad_height, target_width, cns))
+        new_image[:rows, :cols,:] = origin_img
 
-    return x1, y1, x2, y2
+        img_scale = float(target_width)/predict_width
+        x1 = int(x1*img_scale)
+        y1 = int(y1*img_scale)
+        x2 = int(x2*img_scale)
+        y2 = int(y2*img_scale)
+
+        return x1, y1, x2, y2
+    except:
+        return None
 
 
 if __name__ == '__main__':

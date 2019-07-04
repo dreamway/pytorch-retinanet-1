@@ -52,9 +52,14 @@ def main(args=None):
 	start_epoch = 0
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 	best_acc = 0 # best test accuracy
-	
-	mean = (0.1146, 0.1147, 0.1148)
-	std = (0.1089, 0.1090, 0.1090)
+
+	# mean & std for ROI extraction
+	#mean = (0.1146, 0.1147, 0.1148)
+	#std = (0.1089, 0.1090, 0.1090)
+
+	# mean & std for QRCode extraction
+	mean = (0.2405, 0.2416, 0.2427)
+	std = (0.2194, 0.2208, 0.2223)
 
 	# Create the data loaders
 	if parser.dataset == 'coco':
@@ -203,7 +208,7 @@ def main(args=None):
 			AP, num_annotations = mAP[0]
 			acc = 100.*AP
 			if acc > best_acc:
-				print('Saving...')
+				print('Saving... acc:', acc)
 				state = {
 					'net': retinanet.state_dict(),
 					'acc': acc,
@@ -219,7 +224,7 @@ def main(args=None):
 		
 		scheduler.step(np.mean(epoch_loss))	
 
-		torch.save(retinanet.module, osp.join('checkpoints','{}_retinanet_{}.pt'.format(parser.dataset, epoch_num)))
+		#torch.save(retinanet.module, osp.join('checkpoints','{}_retinanet_{}.pt'.format(parser.dataset, epoch_num)))
 
 	retinanet.eval()
 
